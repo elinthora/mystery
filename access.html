@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GARDA SÍOCHÁNA — Investigator Access Portal</title>
+<style>
+  :root{
+    --bg:#07101a; --panel:#0b1620; --accent:#b71c1c; --ink:#e6eef6; --muted:#9fb3c9; --line:rgba(255,255,255,.04);
+  }
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:linear-gradient(180deg,#061018 0%, #07101a 100%);color:var(--ink)}
+  .wrap{max-width:980px;margin:32px auto;padding:18px}
+  .banner{background:#0b0b0b;border-left:6px solid var(--accent);padding:12px 16px;font-weight:800;letter-spacing:.06em}
+  .sub{color:var(--muted);font-size:13px;margin-top:6px}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px;box-shadow:0 12px 36px rgba(0,0,0,.55)}
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:18px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  h1{margin:0 0 8px}
+  .meta{color:var(--muted);font-size:13px}
+  .warn{background:linear-gradient(180deg,#2b1212,#2a0f10);border-left:4px solid #7f1d1d;padding:10px;border-radius:8px;margin-top:12px;color:#ffdede}
+  .pwbox{display:flex;gap:8px;margin-top:12px}
+  input[type="password"]{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:#071624;color:var(--ink);font-size:15px}
+  button{background:var(--accent);color:white;border:none;padding:9px 12px;border-radius:8px;font-weight:700;cursor:pointer}
+  .secondary{background:#0f2a38;border:1px solid rgba(255,255,255,.03);color:var(--muted)}
+  .small{font-size:13px;color:var(--muted)}
+  .audit{background:#061426;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.03);font-size:13px;color:var(--muted);white-space:pre-wrap}
+  .locked{background:#2c1b1b;color:#ffdede;padding:10px;border-radius:8px;margin-top:12px}
+  .ok{background:#102b1f;color: #bff0c9;padding:10px;border-radius:8px;margin-top:12px}
+  .footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+  a.inline{color:var(--muted);text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="banner">
+      GARDA SÍOCHÁNA — SECURE DATABASE PORTAL
+      <div class="sub">CASE FILE CS6849 — AUTHORIZED PERSONNEL ONLY</div>
+    </div>
+
+    <div class="panel">
+      <div class="grid">
+        <div>
+          <h1>Investigator Access</h1>
+          <div class="meta">You are attempting to access restricted investigative materials. This portal is monitored. Proceed only if you are an authorised investigator with explicit access.</div>
+
+          <div class="warn" style="margin-top:12px">
+            <strong>SECURITY NOTICE</strong><br>
+            Unauthorized access or distribution of these materials is strictly prohibited. Access attempts are logged locally. If you are not authorised, return to the public catalogue immediately.
+          </div>
+
+          <div style="margin-top:14px">
+            <label class="small">Enter investigator access code</label>
+            <div class="pwbox">
+              <input id="code" type="password" placeholder="Access code (investigators only)" autocomplete="off" />
+              <button id="submit">Enter</button>
+            </div>
+
+            <div id="msg" class="locked" style="display:none"></div>
+
+            <div style="margin-top:12px">
+              <a class="secondary" href="index.html" role="button">Return to Case File — Open Catalogue</a>
+            </div>
+
+            <p class="small" style="margin-top:10px">Successful authentication will forward you to the restricted evidence portal.</p>
+          </div>
+        </div>
+
+        <aside>
+          <h3 class="small">Authentication — Investigator</h3>
+          <div class="meta" style="margin-top:6px">Access Level: <strong>RESTRICTED</strong></div>
+          <div class="meta">Case ID: <strong>CS6849</strong></div>
+          <div class="meta" style="margin-top:8px">Audit log (local):</div>
+          <div id="audit" class="audit" aria-live="polite">No attempts yet.</div>
+
+          <div id="lockNote" class="small" style="margin-top:12px;color:var(--muted)">
+            After <strong>3</strong> failed attempts the portal will lock for <strong>5 minutes</strong>.
+          </div>
+        </aside>
+      </div>
+
+      <div class="footer">
+        This portal is for authorised personnel only. All access attempts are recorded.
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Access logic (password verification and lock behavior) */
+const storedHash = "ce6e39b1818c7a82e5fdc8c3d62bea96b2927ec7b71eca1c845d5ceeebeb27d4"; // SHA256("murder123")
+const redirectTo = "restricted.html"; // page to open on success
+const maxAttempts = 3;
+const lockSeconds = 300; // 5 minutes
+
+const input = document.getElementById('code');
+const btn = document.getElementById('submit');
+const audit = document.getElementById('audit');
+const msg = document.getElementById('msg');
+
+let attempts = 0;
+let lockedUntil = 0;
+
+// Utility: compute SHA-256 hex
+async function sha256hex(msg) {
+  const enc = new TextEncoder();
+  const data = enc.encode(msg);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function logAttempt(ok) {
+  const t = new Date().toLocaleString();
+  const line = ok ? `${t} — SUCCESS` : `${t} — failed attempt (${attempts}/${maxAttempts})`;
+  const cur = audit.textContent === "No attempts yet." ? [] : audit.textContent.split('\n');
+  cur.unshift(line);
+  const trimmed = cur.slice(0,8);
+  audit.textContent = trimmed.join('\n');
+}
+
+function setLock(seconds) {
+  lockedUntil = Date.now() + seconds*1000;
+  input.disabled = true;
+  btn.disabled = true;
+  let remaining = Math.ceil((lockedUntil - Date.now())/1000);
+  msg.style.display = '';
+  msg.className = 'locked';
+  msg.textContent = `Too many failed attempts — portal locked for ${Math.ceil(remaining/60)} minutes.`;
+  const iv = setInterval(()=>{
+    remaining = Math.ceil((lockedUntil - Date.now())/1000);
+    if (remaining <= 0) {
+      clearInterval(iv);
+      input.disabled = false;
+      btn.disabled = false;
+      msg.style.display = 'none';
+      attempts = 0;
+      audit.textContent = (audit.textContent ? audit.textContent + '\n' : '') + (new Date().toLocaleString() + ' — lock expired');
+    } else {
+      // update minutes remaining for clarity
+      const mins = Math.ceil(remaining/60);
+      msg.textContent = `Too many failed attempts — portal locked for ${mins} minute(s).`;
+    }
+  }, 1000);
+}
+
+// handle enter key
+input.addEventListener('keyup', (e)=>{
+  if (e.key === 'Enter') btn.click();
+});
+
+// Main submit handler
+btn.addEventListener('click', async ()=>{
+  if (lockedUntil && Date.now() < lockedUntil) {
+    const remain = Math.ceil((lockedUntil - Date.now())/1000);
+    msg.style.display = '';
+    msg.className = 'locked';
+    msg.textContent = `Portal is locked. Please wait ${Math.ceil(remain/60)} minute(s).`;
+    return;
+  }
+
+  const value = (input.value || '').trim();
+  if (!value) {
+    msg.style.display = '';
+    msg.className = 'locked';
+    msg.textContent = 'Enter a valid access code.';
+    return;
+  }
+
+  btn.disabled = true;
+  const h = await sha256hex(value);
+  btn.disabled = false;
+
+  if (h === storedHash) {
+    logAttempt(true);
+    msg.style.display = '';
+    msg.className = 'ok';
+    msg.textContent = 'Access granted. Redirecting to restricted evidence portal…';
+    setTimeout(()=> {
+      window.location.href = redirectTo;
+    }, 900);
+  } else {
+    attempts++;
+    logAttempt(false);
+    msg.style.display = '';
+    msg.className = 'locked';
+    msg.textContent = 'Incorrect access code.';
+    input.value = '';
+    input.focus();
+    if (attempts >= maxAttempts) {
+      setLock(lockSeconds);
+    }
+  }
+});
+
+// auto-lock state persistence (optional): if page reloads during lock, it won't persist. For stronger simulation, store lockedUntil in localStorage.
+</script>
+</body>
+</html>
