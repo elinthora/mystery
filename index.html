@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Case DB — OPERATION NIGHTFALL</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#0f1720;--accent:#e74c3c;--text:#e6eef6}
+  body{margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#061018 0%,#071225 100%);color:var(--text)}
+  header{padding:20px;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:16px}
+  .badge{background:var(--accent);color:#fff;padding:6px 10px;border-radius:6px;font-weight:700}
+  .container{max-width:980px;margin:28px auto;padding:18px}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:18px;border-radius:10px;box-shadow:0 6px 24px rgba(2,6,23,.6)}
+  .row{display:flex;gap:18px;flex-wrap:wrap}
+  .col{flex:1 1 320px}
+  .file-card{background:#07101a;padding:12px;border-radius:8px;margin-bottom:10px;border:1px dashed rgba(255,255,255,.03)}
+  .file-card a{color:var(--text);text-decoration:none;font-weight:600}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px}
+  .thumb{height:120px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,.03)}
+  .meta{font-size:13px;color:#a9c0d8}
+  .pwbox{display:flex;gap:8px;margin-top:8px}
+  input[type="password"]{padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.06);background:#061223;color:var(--text);min-width:200px}
+  button{background:var(--accent);border:none;padding:8px 12px;border-radius:6px;color:white;cursor:pointer}
+  .hint{font-size:13px;color:#98b4d0;margin-top:8px}
+  footer{margin-top:18px;color:#8fa9c6;font-size:13px}
+  .hidden{display:none}
+  .topbar-right{margin-left:auto;color:#8fa9c6;font-size:13px}
+  .logo{font-weight:800;letter-spacing:1px}
+  .warning{background:#3b2a2a;padding:8px;border-radius:6px;color:#ffdede;margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">CASE DB</div>
+  <div class="badge">OP: NIGHTFALL</div>
+  <div class="topbar-right">Police Portal — Internal</div>
+</header>
+
+<div class="container">
+  <div id="gate" class="panel">
+    <h2>Secure access</h2>
+    <p class="meta">Enter access code to view case files and images.</p>
+    <div class="pwbox">
+      <input id="pw" type="password" placeholder="Enter access code" />
+      <button id="unlock">Unlock</button>
+    </div>
+    <div class="hint">If you are a participant, the game master will give you the code.</div>
+    <div id="wrong" class="warning hidden">Incorrect code — try again.</div>
+  </div>
+
+  <div id="content" class="panel hidden">
+    <div class="row">
+      <div class="col">
+        <h3>Case Files</h3>
+        <div class="file-card">
+          <div><a href="files/initial_report.pdf" target="_blank">Initial Incident Report — PDF</a></div>
+          <div class="meta">Uploaded: 2025-09-20 • Confidential</div>
+        </div>
+        <div class="file-card">
+          <div><a href="files/witness_statements.docx" target="_blank">Witness Statements — DOCX</a></div>
+          <div class="meta">Uploaded: 2025-09-22</div>
+        </div>
+        <div class="file-card">
+          <div><a href="files/forensics_images.zip" target="_blank">Forensics Images (zip)</a></div>
+          <div class="meta">Uploaded: 2025-09-23</div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h3>Image Gallery</h3>
+        <div class="meta">Click to enlarge</div>
+        <div class="gallery" id="gallery">
+          <a href="files/img1_large.jpg" target="_blank"><img class="thumb" src="files/img1.jpg" alt="Crime scene 1"></a>
+          <a href="files/img2_large.jpg" target="_blank"><img class="thumb" src="files/img2.jpg" alt="Evidence 2"></a>
+          <a href="files/img3_large.jpg" target="_blank"><img class="thumb" src="files/img3.jpg" alt="Suspect 1"></a>
+          <!-- add more thumbnails pointing to larger images -->
+        </div>
+      </div>
+    </div>
+
+    <hr style="margin:18px 0;border:none;border-top:1px solid rgba(255,255,255,.03)">
+    <div>
+      <strong>Notes</strong>
+      <p class="meta">Use the “Files” list above to download evidence. Images open in a new tab. The site is meant for game use only.</p>
+    </div>
+    <footer>Made by the Game Master — Keep case details secret until briefing.</footer>
+  </div>
+
+  <div id="publicNotice" class="panel" style="margin-top:12px">
+    <strong>Public preview</strong>
+    <p class="meta">If you want visitors to see non-sensitive teaser files without a password, put those links in a separate public area and don't hide them behind the gate.</p>
+  </div>
+</div>
+
+<script>
+/*
+ Client-side SHA256 compare.
+ This is NOT foolproof security; it just prevents casual discovery.
+ Stored hash: SHA256("murder123") = ce6e39b1818c7a82e5fdc8c3d62bea96b2927ec7b71eca1c845d5ceeebeb27d4
+ To change password: compute SHA256 of new password and replace storedHash.
+*/
+const storedHash = "ce6e39b1818c7a82e5fdc8c3d62bea96b2927ec7b71eca1c845d5ceeebeb27d4";
+
+async function sha256hex(msg) {
+  const enc = new TextEncoder();
+  const data = enc.encode(msg);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+document.getElementById('unlock').addEventListener('click', async () => {
+  const v = document.getElementById('pw').value || "";
+  const h = await sha256hex(v);
+  if (h === storedHash) {
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+    document.getElementById('wrong').classList.add('hidden');
+    history.replaceState({}, '', '#unlocked');
+  } else {
+    document.getElementById('wrong').classList.remove('hidden');
+  }
+});
+
+// optionally auto-unlock if #unlocked present
+if (location.hash === '#unlocked') {
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('content').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
