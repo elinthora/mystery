@@ -66,7 +66,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', ()=> {
-  // Config: replace storedHash if you change access code
+  // CONFIG: change storedHash to the SHA256 hex of a new password if you want a different code.
   const storedHash = "ce6e39b1818c7a82e5fdc8c3d62bea96b2927ec7b71eca1c845d5ceeebeb27d4"; // SHA256("murder123")
   const redirectTo = "restricted.html";
   const maxAttempts = 3;
@@ -77,31 +77,36 @@ document.addEventListener('DOMContentLoaded', ()=> {
   const auditEl = document.getElementById('audit');
   const msg = document.getElementById('msg');
 
+  // persisted state keys
+  const KEY_ATT = 'cs6849_attempts';
+  const KEY_LOCK = 'cs6849_lockedUntil';
+  const KEY_AUD = 'cs6849_audit';
+
   // read persisted state
-  let attempts = parseInt(localStorage.getItem('cs6849_attempts')||'0',10);
-  let lockedUntil = parseInt(localStorage.getItem('cs6849_lockedUntil')||'0',10);
+  let attempts = parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0;
+  let lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
 
   console.info('Access portal loaded. attempts=', attempts, 'lockedUntil=', lockedUntil);
 
-  // helper: update audit area and persist
+  // Initialize audit display
+  auditEl.textContent = localStorage.getItem(KEY_AUD) || 'No attempts yet.';
+
   function pushAudit(line) {
     const now = new Date().toLocaleString();
     const entry = `${now} — ${line}`;
-    const cur = (localStorage.getItem('cs6849_audit') || '').trim();
-    const next = (entry + (cur ? '\n' + cur : ''));
-    localStorage.setItem('cs6849_audit', next);
-    auditEl.textContent = next || 'No attempts yet.';
+    const cur = (localStorage.getItem(KEY_AUD) || '').trim();
+    const next = entry + (cur ? '\n' + cur : '');
+    localStorage.setItem(KEY_AUD, next);
+    auditEl.textContent = next;
   }
-  // initialize audit area
-  auditEl.textContent = localStorage.getItem('cs6849_audit') || 'No attempts yet.';
 
-  // lock helper
+  // update lock UI; returns true if locked
   let lockTimer = null;
   function updateLockDisplay() {
     const now = Date.now();
     if (lockedUntil && now < lockedUntil) {
-      const remaining = Math.max(0, Math.ceil((lockedUntil - now)/1000));
-      const mins = Math.floor(remaining/60);
+      const remaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
+      const mins = Math.floor(remaining / 60);
       const secs = remaining % 60;
       msg.style.display = '';
       msg.className = 'locked';
@@ -110,7 +115,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
       btn.disabled = true;
       return true;
     } else {
-      // unlocked
       msg.style.display = 'none';
       input.disabled = false;
       btn.disabled = false;
@@ -119,9 +123,9 @@ document.addEventListener('DOMContentLoaded', ()=> {
   }
 
   function setLock(seconds) {
-    lockedUntil = Date.now() + seconds*1000;
-    localStorage.setItem('cs6849_lockedUntil', String(lockedUntil));
-    localStorage.setItem('cs6849_attempts', '0');
+    lockedUntil = Date.now() + seconds * 1000;
+    localStorage.setItem(KEY_LOCK, String(lockedUntil));
+    localStorage.setItem(KEY_ATT, '0');
     attempts = 0;
     pushAudit('LOCKED — too many failed attempts');
     if (lockTimer) clearInterval(lockTimer);
@@ -129,36 +133,66 @@ document.addEventListener('DOMContentLoaded', ()=> {
       if (!updateLockDisplay()) {
         clearInterval(lockTimer);
         lockedUntil = 0;
-        localStorage.removeItem('cs6849_lockedUntil');
+        localStorage.removeItem(KEY_LOCK);
         pushAudit('LOCK EXPIRED');
       }
     }, 1000);
     updateLockDisplay();
   }
 
-  // initial display
   updateLockDisplay();
 
-  // SHA256 helper
+  // SHA-256 helper: prefer crypto.subtle, otherwise dynamic fallback to CryptoJS (CDN)
   async function sha256hex(msg) {
-    if (!window.crypto || !crypto.subtle) {
-      console.error('crypto.subtle unavailable in this browser.');
-      throw new Error('Browser does not support crypto.subtle required for hash.');
+    // prefer native Subtle API
+    if (window.crypto && crypto.subtle && typeof crypto.subtle.digest === 'function') {
+      try {
+        const enc = new TextEncoder();
+        const data = enc.encode(msg);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (e) {
+        console.warn('crypto.subtle.digest failed:', e);
+        // fall through to fallback
+      }
     }
-    const enc = new TextEncoder();
-    const data = enc.encode(msg);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+
+    // fallback: ensure CryptoJS is loaded, then compute
+    if (window.CryptoJS && CryptoJS.SHA256) {
+      return CryptoJS.SHA256(msg).toString(CryptoJS.enc.Hex);
+    }
+
+    // load CryptoJS dynamically
+    await new Promise((resolve, reject) => {
+      const src = 'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js';
+      if (document.querySelector('script[src="'+src+'"]')) {
+        // already in DOM but not ready? give it a beat
+        setTimeout(resolve, 200);
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.crossOrigin = 'anonymous';
+      s.onload = ()=> resolve();
+      s.onerror = (e)=> reject(new Error('Failed to load CryptoJS: ' + e));
+      document.head.appendChild(s);
+    });
+
+    if (window.CryptoJS && CryptoJS.SHA256) {
+      return CryptoJS.SHA256(msg).toString(CryptoJS.enc.Hex);
+    }
+    throw new Error('No hashing available');
   }
 
   btn.addEventListener('click', async ()=> {
-    // prevent action while locked
+    // if locked, show remaining
     if (lockedUntil && Date.now() < lockedUntil) {
       updateLockDisplay();
       console.warn('Attempt while locked.');
       return;
     }
+
     const value = (input.value || '').trim();
     if (!value) {
       msg.style.display = '';
@@ -173,14 +207,14 @@ document.addEventListener('DOMContentLoaded', ()=> {
       console.info('Computed hash:', h);
       if (h === storedHash) {
         pushAudit('SUCCESS');
-        localStorage.setItem('cs6849_attempts','0');
+        localStorage.setItem(KEY_ATT, '0');
         msg.style.display = '';
         msg.className = 'ok';
         msg.textContent = 'Access granted — redirecting…';
         setTimeout(()=> window.location.href = redirectTo, 700);
       } else {
-        attempts = (parseInt(localStorage.getItem('cs6849_attempts')||'0',10) || 0) + 1;
-        localStorage.setItem('cs6849_attempts', String(attempts));
+        attempts = (parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0) + 1;
+        localStorage.setItem(KEY_ATT, String(attempts));
         pushAudit(`FAILED attempt ${attempts}`);
         console.warn('Incorrect code. attempts=', attempts);
         msg.style.display = '';
@@ -193,25 +227,24 @@ document.addEventListener('DOMContentLoaded', ()=> {
         }
       }
     } catch (err) {
-      console.error('Error computing hash or running check:', err);
+      console.error('Error while verifying code:', err);
       msg.style.display = '';
       msg.className = 'locked';
-      msg.textContent = 'Technical error — see browser console for details.';
+      msg.textContent = 'Technical error — see browser console.';
     } finally {
       btn.disabled = false;
     }
   });
 
-  // enter key
   input.addEventListener('keyup', (e)=> { if (e.key === 'Enter') btn.click(); });
 
-  // debug: show a single verification log to help debugging
+  // quick debug message to console
   (async ()=> {
     try {
       const test = await sha256hex('murder123');
-      console.info('SHA256 test (murder123) =>', test, '(should match storedHash)');
+      console.info('SHA256 test (murder123) =>', test);
     } catch(e) {
-      console.warn('SHA256 test failed (crypto unavailable). See console for errors.');
+      console.warn('SHA256 test failed; fallback not available. Error:', e);
     }
   })();
 
