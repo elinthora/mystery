@@ -12,7 +12,6 @@
   .panel{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
   .grid{display:grid;grid-template-columns:1fr 340px;gap:18px}
   @media(max-width:900px){.grid{grid-template-columns:1fr}}
-  label.small{font-size:13px;color:var(--muted)}
   .pwbox{display:flex;gap:8px;margin-top:12px}
   input[type="password"]{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:#071624;color:var(--ink);font-size:15px}
   button{background:var(--accent);color:white;border:none;padding:9px 12px;border-radius:8px;cursor:pointer}
@@ -21,6 +20,7 @@
   .locked{background:#2c1b1b;color:#ffdede;padding:10px;border-radius:8px;margin-top:12px}
   .ok{background:#102b1f;color:#bff0c9;padding:10px;border-radius:8px;margin-top:12px}
   .footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+  .debug { font-size:11px;color:#9fb3c9;margin-top:8px; }
 </style>
 </head>
 <body>
@@ -47,6 +47,7 @@
           </div>
 
           <p class="small" style="margin-top:10px;color:var(--muted)">Successful authentication will forward you to the restricted evidence portal.</p>
+          <div class="debug" id="dbg" aria-hidden="true"></div>
         </div>
 
         <aside>
@@ -66,8 +67,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', ()=> {
-  // SIMPLE PASSWORD: change the value below to set a different access code.
-  const PASSWORD = "murder123"; // <-- change if you want a different code
+  // SIMPLE PASSWORD: edit to change
+  const PASSWORD = "murder123";
   const redirectTo = "restricted.html";
   const maxAttempts = 3;
   const lockSeconds = 300; // 5 minutes
@@ -76,16 +77,21 @@ document.addEventListener('DOMContentLoaded', ()=> {
   const btn = document.getElementById('submit');
   const auditEl = document.getElementById('audit');
   const msg = document.getElementById('msg');
+  const dbg = document.getElementById('dbg');
 
   const KEY_ATT = 'cs6849_attempts';
   const KEY_LOCK = 'cs6849_lockedUntil';
   const KEY_AUD = 'cs6849_audit';
 
-  // read persisted state (safe defaults)
-  let attempts = parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0;
-  let lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
+  function nowTs(){ return Date.now(); }
+  function readAttempts(){ return parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0; }
+  function readLockedUntil(){ return parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0; }
 
-  // initialize audit display
+  // state is primarily in localStorage; keep light in-memory cache for performance
+  let attempts = readAttempts();
+  let lockedUntil = readLockedUntil();
+
+  // init audit area from storage
   auditEl.textContent = localStorage.getItem(KEY_AUD) || 'No attempts yet.';
 
   function pushAudit(line) {
@@ -97,11 +103,12 @@ document.addEventListener('DOMContentLoaded', ()=> {
     auditEl.textContent = next;
   }
 
-  // Timer management: always recalc remaining from lockedUntil
-  let lockTimer = null;
-  function updateLockDisplay() {
-    const now = Date.now();
-    if (lockedUntil && now < lockedUntil) {
+  // Robust UI updater: always recalc remaining from storage
+  function updateLockUI() {
+    lockedUntil = readLockedUntil();
+    const now = nowTs();
+    const locked = lockedUntil && now < lockedUntil;
+    if (locked) {
       const remaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
       const mins = Math.floor(remaining / 60);
       const secs = remaining % 60;
@@ -110,72 +117,60 @@ document.addEventListener('DOMContentLoaded', ()=> {
       msg.textContent = `Portal locked: ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')} remaining.`;
       input.disabled = true;
       btn.disabled = true;
-      return true;
     } else {
       msg.style.display = 'none';
       input.disabled = false;
       btn.disabled = false;
-      return false;
+    }
+    // small debug aid (safe to leave)
+    dbg.textContent = `lockedUntil: ${lockedUntil}  now: ${now}  attempts: ${readAttempts()}`;
+    // console.debug('updateLockUI', {lockedUntil, now});
+    return locked;
+  }
+
+  // rAF loop while visible to keep UI smooth when active
+  let rafId = null;
+  function rafTick(){
+    updateLockUI();
+    rafId = requestAnimationFrame(rafTick);
+  }
+  function startRAF(){
+    if (rafId === null && !document.hidden) rafTick();
+  }
+  function stopRAF(){
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  // keep a 1s interval as backup to ensure update when rAF may not fire exactly
+  let intervalId = null;
+  function startInterval(){
+    if (intervalId === null) {
+      intervalId = setInterval(()=> { updateLockUI(); }, 1000);
     }
   }
-
-  function startLockInterval() {
-    // clear any existing
-    if (lockTimer) clearInterval(lockTimer);
-    // set a repeating tick that recalculates remaining from localStorage value
-    lockTimer = setInterval(()=> {
-      // always re-read lockedUntil from storage in case another tab changed it
-      lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
-      if (!updateLockDisplay()) {
-        // if unlocked, clear timer (but keep it simple: keep ticking is harmless)
-      }
-    }, 1000);
+  function stopInterval(){
+    if (intervalId !== null) { clearInterval(intervalId); intervalId = null; }
   }
 
-  function setLock(seconds) {
-    lockedUntil = Date.now() + seconds * 1000;
-    localStorage.setItem(KEY_LOCK, String(lockedUntil));
+  function setLock(seconds){
+    const until = nowTs() + seconds*1000;
+    localStorage.setItem(KEY_LOCK, String(until));
     localStorage.setItem(KEY_ATT, '0');
     attempts = 0;
     pushAudit('LOCKED — too many failed attempts');
-    updateLockDisplay();
-    startLockInterval();
+    updateLockUI();
   }
 
-  // ensure UI is correct on load
-  updateLockDisplay();
-  startLockInterval();
-
-  // also respond to visibility and pageshow events so UI updates immediately when returning
-  document.addEventListener('visibilitychange', ()=> {
-    // when tab becomes visible, recalc and update immediately
-    if (!document.hidden) {
-      lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
-      updateLockDisplay();
-      // restart interval to ensure ticks run
-      startLockInterval();
-    }
-  });
-
-  // pageshow covers back/forward cache restores
-  window.addEventListener('pageshow', (ev)=> {
-    lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
-    updateLockDisplay();
-    startLockInterval();
-  });
-
-  // success/fail handlers
-  function onSuccess() {
+  function onSuccess(){
     pushAudit('SUCCESS');
-    localStorage.setItem(KEY_ATT, '0');
+    localStorage.setItem(KEY_ATT,'0');
     msg.style.display = '';
     msg.className = 'ok';
     msg.textContent = 'Access granted — redirecting…';
     setTimeout(()=> window.location.href = redirectTo, 700);
   }
-
-  function onFail() {
-    attempts = (parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0) + 1;
+  function onFail(){
+    attempts = (parseInt(localStorage.getItem(KEY_ATT) || '0',10) || 0) + 1;
     localStorage.setItem(KEY_ATT, String(attempts));
     pushAudit(`FAILED attempt ${attempts}`);
     msg.style.display = '';
@@ -186,30 +181,48 @@ document.addEventListener('DOMContentLoaded', ()=> {
     if (attempts >= maxAttempts) setLock(lockSeconds);
   }
 
-  btn.addEventListener('click', ()=> {
-    // refresh in-memory values from storage (in case other tab changed them)
-    attempts = parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0;
-    lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
+  // button handler
+  btn.addEventListener('click', ()=>{
+    // refresh in-memory values
+    attempts = readAttempts();
+    lockedUntil = readLockedUntil();
+    if (lockedUntil && nowTs() < lockedUntil) { updateLockUI(); return; }
+    const v = (input.value || '').trim();
+    if (!v){ msg.style.display=''; msg.className='locked'; msg.textContent='Enter a valid access code.'; return; }
+    if (v === PASSWORD) onSuccess(); else onFail();
+  });
+  input.addEventListener('keyup', (e)=> { if (e.key === 'Enter') btn.click(); });
 
-    if (lockedUntil && Date.now() < lockedUntil) {
-      updateLockDisplay();
-      return;
-    }
-    const value = (input.value || '').trim();
-    if (!value) {
-      msg.style.display = '';
-      msg.className = 'locked';
-      msg.textContent = 'Enter a valid access code.';
-      return;
-    }
-    if (value === PASSWORD) {
-      onSuccess();
+  // React to tab/visibility/focus/storage events to force immediate UI recalculation
+  document.addEventListener('visibilitychange', ()=> {
+    // when tab becomes visible, refresh UI
+    updateLockUI();
+    if (!document.hidden) {
+      startRAF();
+      startInterval();
     } else {
-      onFail();
+      stopRAF();
+      // keep interval as backup (optional) - browser might throttle it heavily in background
+    }
+  });
+  window.addEventListener('focus', ()=> { updateLockUI(); startRAF(); startInterval(); });
+  window.addEventListener('pageshow', ()=> { updateLockUI(); startRAF(); startInterval(); });
+  window.addEventListener('storage', (ev)=> {
+    // responds to changes made in other tabs/windows for same origin
+    if ([KEY_LOCK, KEY_ATT, KEY_AUD].includes(ev.key)) {
+      updateLockUI();
+      auditEl.textContent = localStorage.getItem(KEY_AUD) || 'No attempts yet.';
     }
   });
 
-  input.addEventListener('keyup', (e)=> { if (e.key === 'Enter') btn.click(); });
+  // start periodic UI updating
+  updateLockUI();
+  startRAF();
+  startInterval();
+
+  // Debug helper (visible in console). If countdown appears frozen again, open console and paste:
+  // console.log('localStorage lock/attempts', localStorage.getItem('cs6849_lockedUntil'), localStorage.getItem('cs6849_attempts'))
+  console.info('Access page initialized. lockedUntil=', readLockedUntil(), 'attempts=', readAttempts());
 });
 </script>
 </body>
