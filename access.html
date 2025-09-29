@@ -67,9 +67,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', ()=> {
   // SIMPLE PASSWORD: change the value below to set a different access code.
-  // Keep it short and human-friendly (this is intentionally NOT secure).
-  const PASSWORD = "murder123";
-
+  const PASSWORD = "murder123"; // <-- change if you want a different code
   const redirectTo = "restricted.html";
   const maxAttempts = 3;
   const lockSeconds = 300; // 5 minutes
@@ -83,6 +81,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
   const KEY_LOCK = 'cs6849_lockedUntil';
   const KEY_AUD = 'cs6849_audit';
 
+  // read persisted state (safe defaults)
   let attempts = parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0;
   let lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
 
@@ -98,7 +97,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     auditEl.textContent = next;
   }
 
-  // lock display & handling
+  // Timer management: always recalc remaining from lockedUntil
   let lockTimer = null;
   function updateLockDisplay() {
     const now = Date.now();
@@ -120,27 +119,52 @@ document.addEventListener('DOMContentLoaded', ()=> {
     }
   }
 
+  function startLockInterval() {
+    // clear any existing
+    if (lockTimer) clearInterval(lockTimer);
+    // set a repeating tick that recalculates remaining from localStorage value
+    lockTimer = setInterval(()=> {
+      // always re-read lockedUntil from storage in case another tab changed it
+      lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
+      if (!updateLockDisplay()) {
+        // if unlocked, clear timer (but keep it simple: keep ticking is harmless)
+      }
+    }, 1000);
+  }
+
   function setLock(seconds) {
     lockedUntil = Date.now() + seconds * 1000;
     localStorage.setItem(KEY_LOCK, String(lockedUntil));
     localStorage.setItem(KEY_ATT, '0');
     attempts = 0;
     pushAudit('LOCKED — too many failed attempts');
-    if (lockTimer) clearInterval(lockTimer);
-    lockTimer = setInterval(()=> {
-      if (!updateLockDisplay()) {
-        clearInterval(lockTimer);
-        lockedUntil = 0;
-        localStorage.removeItem(KEY_LOCK);
-        pushAudit('LOCK EXPIRED');
-      }
-    }, 1000);
     updateLockDisplay();
+    startLockInterval();
   }
 
+  // ensure UI is correct on load
   updateLockDisplay();
+  startLockInterval();
 
-  // handler
+  // also respond to visibility and pageshow events so UI updates immediately when returning
+  document.addEventListener('visibilitychange', ()=> {
+    // when tab becomes visible, recalc and update immediately
+    if (!document.hidden) {
+      lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
+      updateLockDisplay();
+      // restart interval to ensure ticks run
+      startLockInterval();
+    }
+  });
+
+  // pageshow covers back/forward cache restores
+  window.addEventListener('pageshow', (ev)=> {
+    lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
+    updateLockDisplay();
+    startLockInterval();
+  });
+
+  // success/fail handlers
   function onSuccess() {
     pushAudit('SUCCESS');
     localStorage.setItem(KEY_ATT, '0');
@@ -163,6 +187,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
   }
 
   btn.addEventListener('click', ()=> {
+    // refresh in-memory values from storage (in case other tab changed them)
+    attempts = parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0;
+    lockedUntil = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0;
+
     if (lockedUntil && Date.now() < lockedUntil) {
       updateLockDisplay();
       return;
@@ -174,7 +202,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
       msg.textContent = 'Enter a valid access code.';
       return;
     }
-
     if (value === PASSWORD) {
       onSuccess();
     } else {
@@ -183,7 +210,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
   });
 
   input.addEventListener('keyup', (e)=> { if (e.key === 'Enter') btn.click(); });
-
 });
 </script>
 </body>
