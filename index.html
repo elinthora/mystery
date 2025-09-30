@@ -2,74 +2,120 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>GARDA SÍOCHÁNA — Case File 41165-43</title>
 <style>
-  :root{--bg:#08131d;--panel:#0b1620;--accent:#b71c1c;--ink:#e6eef6;--muted:#9fb3c9;--line:rgba(255,255,255,.06)}
-  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:linear-gradient(180deg,#061018,#07121a);color:var(--ink)}
-  .wrap{max-width:980px;margin:28px auto;padding:18px}
-  .banner{background:#0b0b0b;border-left:6px solid var(--accent);padding:12px 16px;font-weight:800;letter-spacing:.06em}
-  .banner small{display:block;color:var(--muted);font-weight:600;margin-top:6px}
-  header{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
-  .breadcrumbs{color:var(--muted);font-size:13px}
-  .meta{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:13px}
-  .panel{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:12px}
-  h1{margin:6px 0}
-  h2{margin:10px 0}
-  ul{margin:8px 0 0 18px}
-  a{color:#9fc3e8;text-decoration:none}
-  .lockedLink{display:inline-block;margin-top:10px;padding:10px 14px;background:#0e2330;border:1px solid var(--line);border-radius:8px;color:var(--ink);text-decoration:none}
-  .hint{color:var(--muted);font-size:13px}
-  .foot{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
-  .contact{margin-top:12px;font-size:13px}
+  :root{
+    --bg:#061018;
+    --panel:#0b1620;
+    --accent:#b71c1c;
+    --muted:#9fb3c9;
+    --ink:#e6eef6;
+    --card:#071522;
+    --line:rgba(255,255,255,.06);
+  }
+
+  /* Base */
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#041018,#07121a);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:var(--ink);-webkit-font-smoothing:antialiased}
+  .container{max-width:980px;margin:18px auto;padding:16px}
+  .header{background:var(--card);border-left:6px solid var(--accent);padding:14px 16px;border-radius:8px}
+  .header h1{margin:0;font-size:18px;letter-spacing:.04em}
+  .header small{display:block;color:var(--muted);margin-top:8px;font-weight:600}
+
+  /* meta row */
+  .meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;color:var(--muted);font-size:13px}
+  .caseid{font-weight:800;color:var(--ink)}
+  .panel{margin-top:14px;background:linear-gradient(180deg, rgba(255,255,255,.01), rgba(255,255,255,.00));border:1px solid var(--line);padding:16px;border-radius:10px}
+  h2{margin:6px 0 10px 0;font-size:17px}
+  p.lead{color:var(--muted);margin:0 0 12px 0;line-height:1.45}
+
+  /* lists */
+  .files{display:block}
+  ul.file-list{margin:8px 0 0 0;padding:0 0 0 16px}
+  ul.file-list li{margin:8px 0}
+  a.file-link{color:#9fc3e8;text-decoration:none;font-weight:700}
+  a.file-link:active,a.file-link:focus{outline:2px solid rgba(159,179,201,.18);outline-offset:2px}
+
+  /* prominent restricted button */
+  .restricted-wrap{display:flex;flex-direction:column;align-items:center;margin-top:18px}
+  .restricted-btn{
+    display:inline-flex;align-items:center;gap:12px;justify-content:center;
+    background:linear-gradient(180deg,var(--accent),#8b1414);
+    color:white;border:none;padding:14px 18px;border-radius:10px;font-weight:900;
+    font-size:16px;text-decoration:none;box-shadow:0 8px 24px rgba(183,28,28,.18);width:100%;max-width:420px;
+  }
+  .restricted-sub{margin-top:8px;color:var(--muted);font-size:13px;text-align:center;max-width:520px}
+
+  /* footer + legal */
+  .legal{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+  /* responsive typography and spacing */
+  @media (max-width:600px){
+    .header h1{font-size:20px}
+    h2{font-size:16px}
+    .meta{font-size:13px}
+    .restricted-btn{font-size:17px;padding:16px}
+    .container{padding:12px;margin:12px}
+  }
+
+  /* small visual helpers */
+  .divider{height:1px;background:var(--line);margin:14px 0;border-radius:2px}
+  .muted{color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="banner">GARDA SÍOCHÁNA
-      <small>Case File 41165-43 — Evidence Catalogue</small>
-    </div>
+  <div class="container">
+    <header class="header" role="banner" aria-label="Case header">
+      <h1>GARDA SÍOCHÁNA — Case File <span class="caseid">41165-43</span></h1>
+      <small>Evidence Catalogue — Public Documents</small>
 
-    <header>
-      <div class="breadcrumbs">Home / Case Files / 41165-43</div>
-      <div class="meta">
-        <div>Case ID: <strong>41165-43</strong></div>
+      <div class="meta" aria-hidden="false">
+        <div>Case ID: <strong class="caseid">41165-43</strong></div>
         <div>Recorded: <strong>18 September 2025</strong></div>
-        <div>Access Level: <strong>PUBLIC / RESTRICTED</strong></div>
+        <div>Access: <strong>PUBLIC / RESTRICTED</strong></div>
       </div>
     </header>
 
-    <div class="panel">
-      <h1>Evidence Catalogue</h1>
-      <p class="hint">This catalogue provides public access to selected documents relating to Case 41165-43. Certain materials are restricted and require investigator authorisation.</p>
+    <main class="panel" role="main">
+      <p class="lead">The following items are available for review. Certain materials are restricted and require investigator authorisation.</p>
 
-      <h2>Reports</h2>
-      <ul>
-        <li><a href="files/docs/Police%20Report.pdf" target="_blank">Police Report</a></li>
-        <li><a href="files/docs/WitnessStatements.pdf" target="_blank">Witness Statements</a></li>
-      </ul>
+      <section aria-labelledby="reportsTitle">
+        <h2 id="reportsTitle">Reports</h2>
+        <div class="files">
+          <ul class="file-list">
+            <li><a class="file-link" href="files/docs/Police%20Report.pdf" target="_blank" rel="noopener">Police Report (Police%20Report.pdf)</a></li>
+            <li><a class="file-link" href="files/docs/WitnessStatements.pdf" target="_blank" rel="noopener">Witness Statements (WitnessStatements.pdf)</a></li>
+          </ul>
+        </div>
+      </section>
 
-      <h2 style="margin-top:16px">Additional Documents</h2>
-      <ul>
-        <li><a href="files/docs/Bonfire%20Poster.pdf" target="_blank">Bonfire Poster</a></li>
-        <li><a href="files/docs/KKSLetterOctober.pdf" target="_blank">KKS Letter — October</a></li>
-        <li><a href="files/docs/NewspaperClipping.pdf" target="_blank">Newspaper Clipping</a></li>
-        <li><a href="files/docs/ParishNewsletter.pdf" target="_blank">Parish Newsletter</a></li>
-      </ul>
+      <div class="divider" role="separator" aria-hidden="true"></div>
 
-      <div style="margin-top:18px">
-        <a class="lockedLink" href="access.html">RESTRICTED ACCESS — Investigator Portal</a>
-        <p class="hint" style="margin-top:8px">Restricted materials are available to authorised investigators. Use the Investigator Portal to request access.</p>
+      <section aria-labelledby="additionalTitle">
+        <h2 id="additionalTitle">Additional Documents</h2>
+        <div class="files">
+          <ul class="file-list">
+            <li><a class="file-link" href="files/docs/Bonfire%20Poster.pdf" target="_blank" rel="noopener">Bonfire Poster (Bonfire%20Poster.pdf)</a></li>
+            <li><a class="file-link" href="files/docs/KKSLetterOctober.pdf" target="_blank" rel="noopener">KKS Letter — October (KKSLetterOctober.pdf)</a></li>
+            <li><a class="file-link" href="files/docs/NewspaperClipping.pdf" target="_blank" rel="noopener">Newspaper Clipping (NewspaperClipping.pdf)</a></li>
+            <li><a class="file-link" href="files/docs/ParishNewsletter.pdf" target="_blank" rel="noopener">Parish Newsletter (ParishNewsletter.pdf)</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- prominent restricted access control -->
+      <div class="restricted-wrap" aria-hidden="false">
+        <a href="access.html" class="restricted-btn" role="button" aria-label="Open restricted access portal">
+          <span style="font-size:18px">🔒</span>
+          <span>RESTRICTED ACCESS — Investigator Portal</span>
+        </a>
+        <div class="restricted-sub">Authorised investigators only. Click to enter investigator access portal (credentials required).</div>
       </div>
 
-      <div class="contact">
-        <strong>Enquiries:</strong> For authorised requests relating to Case 41165-43 please contact the case lead via the Garda Records Office: <a href="mailto:records@gardai.example">records@gardai.example</a>
+      <div class="legal">
+        © Garda Síochána — Official materials. Reproduction or distribution of restricted content without authorisation is prohibited.
       </div>
-
-      <div class="foot">
-        <div>© Garda Síochána — Official materials. Reproduction or distribution of restricted content without authorisation is prohibited.</div>
-      </div>
-    </div>
+    </main>
   </div>
 </body>
 </html>
