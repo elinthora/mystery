@@ -119,15 +119,15 @@
             </div>
           </div>
 
-          <!-- Form: numeric-only input -->
+          <!-- Form: numeric-only 4-digit input -->
           <form id="accessForm" class="form" onsubmit="return false" aria-describedby="accessHelp">
             <label for="code" class="small" style="font-weight:700">Access Code</label>
             <div class="input-wrap">
-              <!-- numeric-only input: type=tel + inputmode + pattern + maxlength -->
+              <!-- numeric-only input: type=tel + inputmode + pattern + maxlength=4 -->
               <input id="code" type="tel"
                      inputmode="numeric"
                      pattern="\d*"
-                     maxlength="8"
+                     maxlength="4"
                      placeholder="Enter access code here"
                      aria-label="Enter access code here"
                      autocomplete="off"
@@ -159,16 +159,17 @@
 
 <script>
 /*
-  Numeric-only access page:
-  - PASSWORD is numeric (default "1234"). Change PASSWORD if you want a different code.
-  - Input is type="tel" + inputmode="numeric" + pattern="\d*" and JS enforces digits only (removes letters on input/paste).
-  - Rest of behaviors: 3 failed attempts => 5 minute lock; last-5 attempt list; progress bar countdown; audit cleared on success.
+  Numeric-only 4-digit access page:
+  - PASSWORD is numeric (default "1234"). Change PASSWORD if you want a different numeric code.
+  - Input is type="tel" + inputmode="numeric" + pattern="\d*" + maxlength="4" and JS enforces digits only.
+  - Rest: 3 failed attempts => 5 minute lock; last-5 attempt list; progress bar countdown; audit cleared on success.
 */
 document.addEventListener('DOMContentLoaded', ()=> {
-  const PASSWORD = "1234";          // <--- change this if you want a different numeric code
+  const PASSWORD = "1010";          // <--- change this if you want a different 4-digit numeric code
   const redirectTo = "restricted.html";
   const maxAttempts = 3;
   const lockSeconds = 300; // 5 minutes
+  const MAX_LEN = 4;
 
   const KEY_ATT = 'case_41165_43_attempts';
   const KEY_LOCK = 'case_41165_43_lockedUntil';
@@ -247,26 +248,26 @@ document.addEventListener('DOMContentLoaded', ()=> {
     attemptsBadge.textContent = 'Attempts: ' + readAttempts();
   }
 
-  // ensure input contains digits only (strip any non-digits on input/paste)
+  // ensure input contains digits only (strip any non-digits) and enforce MAX_LEN
   input.addEventListener('input', () => {
-    const cleaned = input.value.replace(/\D/g, '');
+    let cleaned = (input.value || '').replace(/\D/g, '');
+    if (cleaned.length > MAX_LEN) cleaned = cleaned.slice(0, MAX_LEN);
     if (cleaned !== input.value) {
       input.value = cleaned;
     }
   });
-  // also guard paste events (prevent non-digit paste then insert cleaned)
+
+  // guard paste events (prevent non-digit paste then insert cleaned, and enforce MAX_LEN)
   input.addEventListener('paste', (ev) => {
     ev.preventDefault();
     const text = (ev.clipboardData || window.clipboardData).getData('text') || '';
-    const cleaned = text.replace(/\D/g, '');
-    // insert at caret position
+    const cleaned = text.replace(/\D/g, '').slice(0, MAX_LEN);
     const start = input.selectionStart || 0;
     const end = input.selectionEnd || 0;
     const val = input.value;
-    const next = val.slice(0, start) + cleaned + val.slice(end);
-    input.value = next.slice(0, input.maxLength || 999);
-    // move caret
-    const pos = start + cleaned.length;
+    const next = (val.slice(0, start) + cleaned + val.slice(end)).slice(0, MAX_LEN);
+    input.value = next;
+    const pos = (start + cleaned.length) > MAX_LEN ? MAX_LEN : start + cleaned.length;
     setTimeout(()=> input.setSelectionRange(pos,pos), 0);
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
