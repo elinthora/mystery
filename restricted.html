@@ -41,7 +41,6 @@
   .sidebar{
     width:260px;
     min-width:200px;
-    /* much stronger background so text is readable over content */
     background: rgba(11,22,32,0.98);
     border-radius:8px;
     padding:12px;
@@ -55,7 +54,11 @@
     box-shadow:0 10px 24px rgba(0,0,0,.6);
     color:var(--ink);
   }
-  .menu-title{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .menu-title{font-size:13px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+  .close-btn{
+    background:transparent;border:0;color:var(--muted);font-size:20px;cursor:pointer;padding:6px;border-radius:6px;
+    display:none; /* shown only when sidebar visible on mobile */
+  }
   .nav{list-style:none;padding:0;margin:6px 0 0 0}
   .nav li{margin:8px 0}
   .nav button{
@@ -132,6 +135,8 @@
     .sidebar .meta{position:sticky;bottom:12px}
     /* reduce tile size a bit for phone */
     .tile img{width:100px;height:100px}
+    /* show close button when sidebar visible */
+    .close-btn.visible{display:inline-block;color:var(--ink);font-size:20px;background:#0f1e28;padding:6px;border-radius:6px}
   }
 </style>
 </head>
@@ -149,9 +154,11 @@
     </div>
 
     <div class="layout" role="application" aria-labelledby="pageTitle">
-      <aside id="theSidebar" class="sidebar" aria-label="Sections">
+      <aside id="theSidebar" class="sidebar" aria-label="Sections" aria-hidden="true">
         <div class="menu-title">
           <div style="font-weight:700;color:var(--muted)">SECTIONS</div>
+          <!-- X close button inside sidebar -->
+          <button id="closeSidebar" class="close-btn" aria-label="Close menu">✕</button>
         </div>
 
         <ul class="nav" id="sectionList" role="tablist">
@@ -184,7 +191,7 @@
   </div>
 
 <script>
-/* same DATA structure as before — filenames must match repo exactly */
+/* DATA: filenames must match your repo exactly */
 const DATA = {
   photos: [
     { file: "files/images/CS68470_BackGarden.jpeg", type: "image" },
@@ -240,6 +247,7 @@ const sectionButtons = Array.from(document.querySelectorAll('#sectionList button
 const hamb = document.getElementById('hamb');
 const sidebar = document.getElementById('theSidebar');
 const overlay = document.getElementById('overlay');
+const closeBtn = document.getElementById('closeSidebar');
 
 /* helpers */
 function filenameFromPath(path){
@@ -286,12 +294,31 @@ function renderSection(key){
   document.getElementById('main').focus();
 }
 
-/* sidebar toggle */
-function showSidebar(){ sidebar.classList.add('visible'); overlay.classList.add('show'); hamb.setAttribute('aria-expanded','true'); }
-function hideSidebar(){ sidebar.classList.remove('visible'); overlay.classList.remove('show'); hamb.setAttribute('aria-expanded','false'); }
+/* show/hide sidebar + button visibility handling */
+function showSidebar(){
+  sidebar.classList.add('visible');
+  sidebar.setAttribute('aria-hidden','false');
+  overlay.classList.add('show');
+  hamb.style.display = 'none';          // hide the top Menu button while sidebar is open
+  closeBtn.classList.add('visible');   // show X button inside sidebar
+  closeBtn.setAttribute('aria-hidden','false');
+  hamb.setAttribute('aria-expanded','true');
+}
+function hideSidebar(){
+  sidebar.classList.remove('visible');
+  sidebar.setAttribute('aria-hidden','true');
+  overlay.classList.remove('show');
+  hamb.style.display = '';              // show the top Menu button again
+  closeBtn.classList.remove('visible'); // hide the X close button
+  closeBtn.setAttribute('aria-hidden','true');
+  hamb.setAttribute('aria-expanded','false');
+}
+
+/* attach events */
 hamb.addEventListener('click', ()=> {
   if (sidebar.classList.contains('visible')) hideSidebar(); else showSidebar();
 });
+closeBtn.addEventListener('click', hideSidebar);
 overlay.addEventListener('click', hideSidebar);
 
 /* nav interactions */
