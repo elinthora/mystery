@@ -14,11 +14,13 @@
   .banner{background:#0b0b0b;border-left:6px solid var(--accent);padding:14px 16px;font-weight:800;letter-spacing:.04em;border-radius:6px}
   .banner small{display:block;color:var(--muted);font-weight:600;margin-top:6px}
   .topbar{display:flex;align-items:center;gap:12px;margin-top:12px}
-  .hamburger{display:none;background:transparent;border:1px solid rgba(255,255,255,.03);padding:8px;border-radius:6px;color:var(--ink);cursor:pointer}
+  .hamburger{
+    display:none;background:transparent;border:1px solid rgba(255,255,255,.03);padding:8px;border-radius:6px;color:var(--ink);cursor:pointer;
+    z-index:120; /* ensure tappable above overlay */
+  }
   .layout{display:flex;gap:16px;margin-top:14px}
   /* SIDEBAR (desktop) */
-  .sidebar{width:260px;min-width:200px;background:linear-gradient(180deg,rgba(255,255,255,.01),rgba(255,255,255,.01));border-radius:8px;padding:12px;border:1px solid var(--line);height:calc(100vh - 180px);position:sticky;top:20px;overflow:auto;transition:transform .28s ease,box-shadow .28s}
-  .sidebar.hidden{transform:translateX(-110%);box-shadow:none}
+  .sidebar{width:260px;min-width:200px;background:linear-gradient(180deg,rgba(255,255,255,.01),rgba(255,255,255,.01));border-radius:8px;padding:12px;border:1px solid var(--line);height:calc(100vh - 180px);position:sticky;top:20px;overflow:auto;transition:transform .28s ease,box-shadow .28s;z-index:110}
   .menu-title{font-size:13px;color:var(--muted);margin-bottom:10px}
   .nav{list-style:none;padding:0;margin:6px 0 0 0}
   .nav li{margin:6px 0}
@@ -43,21 +45,28 @@
   .small{font-size:13px;color:var(--muted)}
   .empty{display:none;margin-top:10px;color:var(--muted)}
 
-  /* Off-canvas overlay when sidebar visible on mobile */
-  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;opacity:0;transition:opacity .2s}
-  .overlay.show{display:block;opacity:1}
+  /* overlay */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:105;
+    opacity:0; transition:opacity .2s ease;
+    display:none; /* hidden by default */
+    pointer-events:none; /* inert when hidden */
+  }
+  .overlay.show{
+    display:block;
+    opacity:1;
+    pointer-events:auto;
+  }
 
   /* responsive: collapse sidebar to hamburger */
   @media (max-width:900px){
     .layout{flex-direction:column}
-    .sidebar{position:fixed;left:12px;top:84px;bottom:12px;z-index:50;height:auto;width:84%;max-width:340px;transform:translateX(-110%);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+    .sidebar{position:fixed;left:12px;top:84px;bottom:12px;z-index:110;height:auto;width:84%;max-width:340px;transform:translateX(-110%);box-shadow:0 10px 30px rgba(0,0,0,.5)}
     .sidebar.visible{transform:translateX(0)}
     .hamburger{display:inline-block}
-    .overlay{display:block}
     .topbar{margin-top:8px}
     .main{padding:12px}
     .sidebar .meta{position:sticky;bottom:12px}
-    .sidebar.hidden{transform:translateX(-110%)}
     /* reduce tile size a bit for phone */
     .tile img{width:100px;height:100px}
   }
