@@ -25,7 +25,7 @@
   /* meta row */
   .meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;color:var(--muted);font-size:13px}
   .caseid{font-weight:800;color:var(--ink)}
-  .panel{margin-top:14px;background:linear-gradient(180deg, rgba(255,255,255,.01), rgba(255,255,255,.00));border:1px solid var(--line);padding:16px;border-radius:10px}
+  .panel{margin-top:14px;background:linear-gradient(180deg, rgba(255,255,255,.01), rgba(255,255,255,.00));border:1px solid var(--line);padding:16px;border-radius:10px;padding-bottom:28px}
   h2{margin:6px 0 10px 0;font-size:17px}
   p.lead{color:var(--muted);margin:0 0 12px 0;line-height:1.45}
 
@@ -46,6 +46,15 @@
   }
   .restricted-sub{margin-top:8px;color:var(--muted);font-size:13px;text-align:center;max-width:520px}
 
+  /* sticky bottom bar (mobile) */
+  .sticky-bar{
+    display:none;
+  }
+  .sticky-inner{
+    max-width:980px;margin:0 auto;padding:10px 16px;
+    display:flex;gap:10px;align-items:center;justify-content:center;
+  }
+
   /* footer + legal */
   .legal{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
 
@@ -54,8 +63,27 @@
     .header h1{font-size:20px}
     h2{font-size:16px}
     .meta{font-size:13px}
-    .restricted-btn{font-size:17px;padding:16px}
+    .restricted-btn{font-size:17px;padding:14px 16px}
     .container{padding:12px;margin:12px}
+    /* make sticky bar visible and main button hidden to avoid duplicate controls */
+    .restricted-wrap{display:none}
+    .sticky-bar{
+      display:block;
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:140;
+      background:linear-gradient(180deg, rgba(6,16,24,0.98), rgba(6,16,24,0.98));
+      border-top:1px solid rgba(255,255,255,.04);
+      box-shadow:0 -8px 24px rgba(0,0,0,.5);
+      padding:8px 6px;
+      backdrop-filter: blur(6px);
+    }
+    /* ensure content isn't hidden under the sticky bar */
+    body{padding-bottom:86px;}
+    .sticky-inner{padding:6px 12px}
+    .sticky-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:12px 14px;border-radius:10px;background:linear-gradient(180deg,var(--accent),#8b1414);color:white;font-weight:900;font-size:16px;text-decoration:none;box-shadow:0 6px 20px rgba(183,28,28,.14)}
   }
 
   /* small visual helpers */
@@ -83,8 +111,8 @@
         <h2 id="reportsTitle">Reports</h2>
         <div class="files">
           <ul class="file-list">
-            <li><a class="file-link" href="files/docs/Police%20Report.pdf" target="_blank" rel="noopener">Police Report (Police%20Report.pdf)</a></li>
-            <li><a class="file-link" href="files/docs/WitnessStatements.pdf" target="_blank" rel="noopener">Witness Statements (WitnessStatements.pdf)</a></li>
+            <li><a class="file-link" href="files/docs/Police%20Report.pdf" target="_blank" rel="noopener">Police Report</a></li>
+            <li><a class="file-link" href="files/docs/WitnessStatements.pdf" target="_blank" rel="noopener">Witness Statements</a></li>
           </ul>
         </div>
       </section>
@@ -95,15 +123,15 @@
         <h2 id="additionalTitle">Additional Documents</h2>
         <div class="files">
           <ul class="file-list">
-            <li><a class="file-link" href="files/docs/Bonfire%20Poster.pdf" target="_blank" rel="noopener">Bonfire Poster (Bonfire%20Poster.pdf)</a></li>
-            <li><a class="file-link" href="files/docs/KKSLetterOctober.pdf" target="_blank" rel="noopener">KKS Letter — October (KKSLetterOctober.pdf)</a></li>
-            <li><a class="file-link" href="files/docs/NewspaperClipping.pdf" target="_blank" rel="noopener">Newspaper Clipping (NewspaperClipping.pdf)</a></li>
-            <li><a class="file-link" href="files/docs/ParishNewsletter.pdf" target="_blank" rel="noopener">Parish Newsletter (ParishNewsletter.pdf)</a></li>
+            <li><a class="file-link" href="files/docs/Bonfire%20Poster.pdf" target="_blank" rel="noopener">Bonfire Poster</a></li>
+            <li><a class="file-link" href="files/docs/KKSLetterOctober.pdf" target="_blank" rel="noopener">KKS Letter — October</a></li>
+            <li><a class="file-link" href="files/docs/NewspaperClipping.pdf" target="_blank" rel="noopener">Newspaper Clipping</a></li>
+            <li><a class="file-link" href="files/docs/ParishNewsletter.pdf" target="_blank" rel="noopener">Parish Newsletter</a></li>
           </ul>
         </div>
       </section>
 
-      <!-- prominent restricted access control -->
+      <!-- desktop / tablet: inline restricted control -->
       <div class="restricted-wrap" aria-hidden="false">
         <a href="access.html" class="restricted-btn" role="button" aria-label="Open restricted access portal">
           <span style="font-size:18px">🔒</span>
@@ -116,6 +144,13 @@
         © Garda Síochána — Official materials. Reproduction or distribution of restricted content without authorisation is prohibited.
       </div>
     </main>
+  </div>
+
+  <!-- Sticky bottom bar for mobile -->
+  <div class="sticky-bar" role="region" aria-label="Restricted access control">
+    <div class="sticky-inner">
+      <a class="sticky-btn" href="access.html" role="button" aria-label="Open restricted access portal">🔒 RESTRICTED ACCESS — Investigator Portal</a>
+    </div>
   </div>
 </body>
 </html>
