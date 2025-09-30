@@ -6,22 +6,28 @@
 <title>GARDA SÍOCHÁNA — Investigator Access Portal</title>
 <style>
   :root{--bg:#07101a;--panel:#0b1620;--accent:#b71c1c;--ink:#e6eef6;--muted:#9fb3c9;--line:rgba(255,255,255,.04)}
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#061018,#07101a);color:var(--ink)}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#061018,#07121a);color:var(--ink)}
   .wrap{max-width:980px;margin:32px auto;padding:18px}
   .banner{background:#0b0b0b;border-left:6px solid var(--accent);padding:12px 16px;font-weight:800}
   .panel{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
-  .grid{display:grid;grid-template-columns:1fr 340px;gap:18px}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
   @media(max-width:900px){.grid{grid-template-columns:1fr}}
-  label.small{font-size:13px;color:var(--muted)}
   .pwbox{display:flex;gap:8px;margin-top:12px}
-  input[type="password"]{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:#071624;color:var(--ink);font-size:15px}
-  button{background:var(--accent);color:white;border:none;padding:9px 12px;border-radius:8px;cursor:pointer}
+  input[type="password"]{flex:1;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:#071624;color:var(--ink);font-size:16px}
+  button{background:var(--accent);color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
   .secondary{background:#0f2a38;border:1px solid rgba(255,255,255,.03);color:var(--muted);padding:8px 10px;border-radius:8px;text-decoration:none;display:inline-block}
-  .audit{background:#061426;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.03);font-size:13px;color:var(--muted);white-space:pre-wrap}
-  .locked{background:#2c1b1b;color:#ffdede;padding:10px;border-radius:8px;margin-top:12px}
-  .ok{background:#102b1f;color:#bff0c9;padding:10px;border-radius:8px;margin-top:12px}
+  .audit{background:#061426;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,.03);font-size:14px;color:var(--muted);white-space:pre-wrap}
+  .locked{background:#2c1b1b;color:#ffdede;padding:12px;border-radius:8px;margin-top:12px;font-weight:700}
+  .ok{background:#102b1f;color:#bff0c9;padding:12px;border-radius:8px;margin-top:12px;font-weight:700}
   .footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
-  .debug { font-size:11px;color:#9fb3c9;margin-top:8px; }
+  .attempts-badge{display:inline-block;background:#111827;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.03);font-weight:700;color:var(--muted)}
+  .audit-title{font-weight:800;margin-bottom:8px;color:var(--muted)}
+  /* mobile: stack audit above input so it's obvious */
+  @media (max-width:900px){
+    .grid{grid-template-columns:1fr}
+    .audit{order:-1;margin-bottom:12px}
+    .pwbox{margin-top:6px}
+  }
 </style>
 </head>
 <body>
@@ -32,11 +38,18 @@
 
     <div class="panel">
       <div class="grid">
+        <!-- Left: main form -->
         <div>
           <h2>Investigator Access</h2>
           <p style="color:var(--muted)">Enter your investigator access code below to proceed to the restricted evidence portal.</p>
 
-          <div class="pwbox">
+          <div id="audit" class="audit" aria-live="polite">
+            <div class="audit-title">Access Audit</div>
+            <div id="auditText">No attempts yet.</div>
+            <div style="margin-top:10px"><span class="attempts-badge" id="attemptsBadge">Attempts: 0</span></div>
+          </div>
+
+          <div class="pwbox" style="margin-top:12px">
             <input id="code" type="password" placeholder="Access code (investigators only)" autocomplete="off" />
             <button id="submit">Enter</button>
           </div>
@@ -48,97 +61,93 @@
           </div>
 
           <p class="small" style="margin-top:10px;color:var(--muted)">Successful authentication will forward you to the restricted evidence portal.</p>
-          <div class="debug" id="dbg" aria-hidden="true"></div>
         </div>
 
+        <!-- Right: info & status -->
         <aside>
           <h4 style="margin:0 0 8px 0;color:var(--muted)">Authentication — Investigator</h4>
           <div style="color:var(--muted);font-size:13px">Access Level: <strong>RESTRICTED</strong></div>
           <div style="color:var(--muted);font-size:13px;margin-top:8px">Case ID: <strong>41165-43</strong></div>
-          <div style="color:var(--muted);font-size:13px;margin-top:12px">Audit log (local):</div>
-          <div id="audit" class="audit" aria-live="polite">No attempts yet.</div>
-
-          <div style="margin-top:12px;color:var(--muted)">After <strong>3</strong> failed attempts the portal will lock for <strong>5 minutes</strong>.</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:12px">After <strong>3</strong> failed attempts the portal will lock for <strong>5 minutes</strong>.</div>
+          <div id="statusBox" style="margin-top:12px" class="small"></div>
         </aside>
       </div>
 
-      <div class="footer">All access attempts are recorded.</div>
+      <div class="footer">All access attempts are recorded locally in your browser.</div>
     </div>
   </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', ()=> {
-  // SIMPLE PASSWORD: edit to change
+  // SIMPLE PASSWORD: change value here if you want a different one
   const PASSWORD = "murder123";
   const redirectTo = "restricted.html";
   const maxAttempts = 3;
   const lockSeconds = 300; // 5 minutes
 
-  const input = document.getElementById('code');
-  const btn = document.getElementById('submit');
-  const auditEl = document.getElementById('audit');
-  const msg = document.getElementById('msg');
-  const dbg = document.getElementById('dbg');
-
-  // UPDATED storage keys (unique to this case)
+  // keys specific to this case to avoid collision
   const KEY_ATT = 'case_41165_43_attempts';
   const KEY_LOCK = 'case_41165_43_lockedUntil';
   const KEY_AUD = 'case_41165_43_audit';
 
-  function nowTs(){ return Date.now(); }
+  const input = document.getElementById('code');
+  const btn = document.getElementById('submit');
+  const auditEl = document.getElementById('auditText');
+  const attemptsBadge = document.getElementById('attemptsBadge');
+  const msg = document.getElementById('msg');
+  const statusBox = document.getElementById('statusBox');
+
+  // read persisted state helpers
   function readAttempts(){ return parseInt(localStorage.getItem(KEY_ATT) || '0', 10) || 0; }
   function readLockedUntil(){ return parseInt(localStorage.getItem(KEY_LOCK) || '0', 10) || 0; }
 
-  let attempts = readAttempts();
-  let lockedUntil = readLockedUntil();
-
-  auditEl.textContent = localStorage.getItem(KEY_AUD) || 'No attempts yet.';
-
-  function pushAudit(line) {
+  function pushAudit(line){
     const now = new Date().toLocaleString();
     const entry = `${now} — ${line}`;
     const cur = (localStorage.getItem(KEY_AUD) || '').trim();
     const next = entry + (cur ? '\n' + cur : '');
     localStorage.setItem(KEY_AUD, next);
     auditEl.textContent = next;
+    attemptsBadge.textContent = 'Attempts: ' + readAttempts();
   }
 
-  function updateLockUI() {
-    lockedUntil = readLockedUntil();
+  // initial render
+  auditEl.textContent = localStorage.getItem(KEY_AUD) || 'No attempts yet.';
+  attemptsBadge.textContent = 'Attempts: ' + readAttempts();
+
+  // UI update that always reads from storage (robust when switching tabs)
+  let rafId = null, intervalId = null;
+  function nowTs(){ return Date.now(); }
+  function updateLockUI(){
+    const lockedUntil = readLockedUntil();
     const now = nowTs();
-    const locked = lockedUntil && now < lockedUntil;
-    if (locked) {
-      const remaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
-      const mins = Math.floor(remaining / 60);
+    if (lockedUntil && now < lockedUntil){
+      const remaining = Math.ceil((lockedUntil - now) / 1000);
+      const mins = Math.floor(remaining/60);
       const secs = remaining % 60;
       msg.style.display = '';
       msg.className = 'locked';
       msg.textContent = `Portal locked: ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')} remaining.`;
       input.disabled = true;
       btn.disabled = true;
+      statusBox.textContent = 'LOCKED — too many failed attempts';
     } else {
       msg.style.display = 'none';
       input.disabled = false;
       btn.disabled = false;
+      statusBox.textContent = '';
+      // clear lock key if expired
+      if (lockedUntil && now >= lockedUntil) localStorage.removeItem(KEY_LOCK);
     }
-    dbg.textContent = `lockedUntil: ${lockedUntil}  now: ${now}  attempts: ${readAttempts()}`;
-    return locked;
+    attemptsBadge.textContent = 'Attempts: ' + readAttempts();
   }
-
-  let rafId = null;
-  function rafTick(){ updateLockUI(); rafId = requestAnimationFrame(rafTick); }
-  function startRAF(){ if (rafId === null && !document.hidden) rafTick(); }
-  function stopRAF(){ if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
-
-  let intervalId = null;
-  function startInterval(){ if (intervalId === null) intervalId = setInterval(()=> updateLockUI(), 1000); }
-  function stopInterval(){ if (intervalId !== null) { clearInterval(intervalId); intervalId = null; } }
+  function startTimers(){ if (!intervalId) intervalId = setInterval(updateLockUI, 1000); if (!rafId) (function r(){ updateLockUI(); rafId = requestAnimationFrame(r); })(); }
+  function stopTimers(){ if (intervalId){ clearInterval(intervalId); intervalId = null } if (rafId){ cancelAnimationFrame(rafId); rafId = null } }
 
   function setLock(seconds){
     const until = nowTs() + seconds*1000;
     localStorage.setItem(KEY_LOCK, String(until));
     localStorage.setItem(KEY_ATT, '0');
-    attempts = 0;
     pushAudit('LOCKED — too many failed attempts');
     updateLockUI();
   }
@@ -152,7 +161,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     setTimeout(()=> window.location.href = redirectTo, 700);
   }
   function onFail(){
-    attempts = (parseInt(localStorage.getItem(KEY_ATT) || '0',10) || 0) + 1;
+    const attempts = (readAttempts() || 0) + 1;
     localStorage.setItem(KEY_ATT, String(attempts));
     pushAudit(`FAILED attempt ${attempts}`);
     msg.style.display = '';
@@ -163,35 +172,34 @@ document.addEventListener('DOMContentLoaded', ()=> {
     if (attempts >= maxAttempts) setLock(lockSeconds);
   }
 
-  btn.addEventListener('click', ()=>{
-    attempts = readAttempts();
-    lockedUntil = readLockedUntil();
-    if (lockedUntil && nowTs() < lockedUntil) { updateLockUI(); return; }
-    const v = (input.value || '').trim();
-    if (!v){ msg.style.display=''; msg.className='locked'; msg.textContent='Enter a valid access code.'; return; }
-    if (v === PASSWORD) onSuccess(); else onFail();
+  btn.addEventListener('click', ()=> {
+    // refresh state
+    if (readLockedUntil() && nowTs() < readLockedUntil()){ updateLockUI(); return; }
+    const val = (input.value || '').trim();
+    if (!val){ msg.style.display=''; msg.className='locked'; msg.textContent='Enter a valid access code.'; return; }
+    if (val === PASSWORD) onSuccess(); else onFail();
   });
   input.addEventListener('keyup', (e)=> { if (e.key === 'Enter') btn.click(); });
 
-  document.addEventListener('visibilitychange', ()=> {
-    updateLockUI();
-    if (!document.hidden) { startRAF(); startInterval(); } else { stopRAF(); }
-  });
-  window.addEventListener('focus', ()=> { updateLockUI(); startRAF(); startInterval(); });
-  window.addEventListener('pageshow', ()=> { updateLockUI(); startRAF(); startInterval(); });
+  // visibility & storage events to keep UI accurate across tabs & restores
+  document.addEventListener('visibilitychange', ()=> { if (!document.hidden) updateLockUI(); });
+  window.addEventListener('pageshow', ()=> updateLockUI());
   window.addEventListener('storage', (ev)=> {
-    if ([KEY_LOCK, KEY_ATT, KEY_AUD].includes(ev.key)) {
-      updateLockUI();
+    if ([KEY_LOCK, KEY_ATT, KEY_AUD].includes(ev.key)){
       auditEl.textContent = localStorage.getItem(KEY_AUD) || 'No attempts yet.';
+      updateLockUI();
     }
   });
 
+  // start
   updateLockUI();
-  startRAF();
-  startInterval();
+  startTimers();
 
-  console.info('Access page initialized. lockedUntil=', readLockedUntil(), 'attempts=', readAttempts());
+  // small debug note in console
+  console.info('Access page ready. attempts=', readAttempts(), 'lockedUntil=', readLockedUntil());
 });
 </script>
 </body>
 </html>
+
+
