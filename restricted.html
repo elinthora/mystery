@@ -162,8 +162,8 @@
         </div>
 
         <ul class="nav" id="sectionList" role="tablist">
-          <li><button data-section="interviews" role="tab">Interviews</button></li>
-          <li><button data-section="photos" class="active" role="tab" aria-selected="true">Crime Scene Photographs</button></li>
+          <li><button data-section="interviews" class="active" role="tab" aria-selected="true">Interviews</button></li>
+          <li><button data-section="photos" role="tab">Crime Scene Photographs</button></li>
           <li><button data-section="recovered" role="tab">Recovered Notes</button></li>
           <li><button data-section="forensics" role="tab">Forensic Reports</button></li>
         </ul>
@@ -179,7 +179,7 @@
 
       <main class="main" id="main" tabindex="0">
         <div class="section-title">
-          <h2 id="pageTitle">Crime Scene Photographs</h2>
+          <h2 id="pageTitle">Interviews</h2>
           <div class="small" id="countInfo">Showing <span id="count">0</span> items</div>
         </div>
 
@@ -333,9 +333,9 @@ sectionButtons.forEach(btn=>{
   });
 });
 
-/* init: pick hash or default photos */
+/* init: pick hash or default interviews */
 (function init(){
-  const hash = location.hash ? location.hash.replace('#','') : 'photos';
+  const hash = location.hash ? location.hash.replace('#','') : 'interviews';
   const initial = sectionButtons.find(b => b.dataset.section === hash) || sectionButtons[0];
   setActiveButton(initial);
   renderSection(initial.dataset.section);
@@ -347,4 +347,3 @@ sectionButtons.forEach(btn=>{
 </script>
 </body>
 </html>
-
